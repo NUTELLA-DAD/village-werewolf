@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Village Werewolf</title>
+<style>
+  :root {
+    --night: #0d1020; --dusk: #1c2140; --ink: #f3ecd8; --quiet: #a9a3c4; --moon: #f6e7a6;
+    --blood: #e0475b; --good: #5fd39a; --panel: rgba(255,255,255,0.06); --line: rgba(255,255,255,0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 70% 0%, #2a2f5a 0%, var(--night) 60%) fixed;
+    color: var(--ink); font-family: Georgia, 'Times New Roman', serif; overflow: hidden;
+    transition: background 1.2s;
+  }
+  body.dark { background: radial-gradient(ellipse at 70% 0%, #151935 0%, #04050c 70%) fixed; }
+  body.day { background: radial-gradient(ellipse at 50% -10%, #6f6aa8 0%, #2b2c55 55%, var(--night) 100%) fixed; }
+  .moon { position: fixed; right: 18vw; top: 6vh; width: 9vh; height: 9vh; border-radius: 50%; background: var(--moon); opacity: 0.18; box-shadow: 0 0 6vh rgba(246,231,166,0.4); z-index: 0; transition: opacity 1.2s; }
+  body.dark .moon { opacity: 0.5; }
+  .app { position: relative; z-index: 1; height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 2.5vh 3vw; gap: 2vh; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 2vw; }
+  h1 { margin: 0; font-size: 5vh; letter-spacing: 0.04em; font-weight: normal; }
+  h1 small { display: block; font-size: 2.2vh; color: var(--quiet); letter-spacing: 0.08em; text-transform: uppercase; }
+  .timer { font-size: 8vh; font-variant-numeric: tabular-nums; color: var(--moon); min-width: 12vw; text-align: right; }
+  .timer.low { color: var(--blood); }
+  main { min-height: 0; display: grid; grid-template-columns: 1fr; gap: 2.5vh; align-content: start; }
+  .caption { font-size: 4.2vh; line-height: 1.35; min-height: 12vh; padding: 2vh 2.5vw; background: var(--panel); border: 1px solid var(--line); border-radius: 2vh; }
+  .sub { color: var(--quiet); font-size: 2.6vh; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4vh 1.2vw; }
+  .tile { display: flex; align-items: center; gap: 1vw; padding: 1.3vh 1.2vw; border-radius: 1.4vh; background: var(--panel); border: 1px solid var(--line); font-size: 3vh; min-width: 0; }
+  .tile .dot { width: 2.4vh; height: 2.4vh; border-radius: 50%; flex: none; }
+  .tile .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .rl { margin-left: auto; font-size: 2.1vh; color: var(--quiet); white-space: nowrap; }
+  .tile.dead { opacity: 0.45; }
+  .tile.dead .nm { text-decoration: line-through; text-decoration-thickness: 2px; }
+  .tile.off .nm::after { content: ' (away)'; color: var(--quiet); font-size: 2vh; }
+  .tile.click { cursor: pointer; }
+  .tile.click:hover { border-color: var(--blood); }
+  .lobby { display: grid; grid-template-columns: auto 1fr; gap: 3vw; align-items: start; }
+  .qr { background: #fff; border-radius: 2vh; padding: 1.5vh; width: 42vh; }
+  .qr svg { display: block; width: 100%; height: auto; }
+  .url { margin-top: 1.2vh; font-size: 2.4vh; color: var(--quiet); text-align: center; word-break: break-all; }
+  .big { font-size: 3.4vh; }
+  button { font-family: inherit; font-size: 2.6vh; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 1.2vh; padding: 1.2vh 1.6vw; cursor: pointer; }
+  button:hover { border-color: var(--moon); }
+  button.primary { background: var(--moon); color: #1a1a2e; border-color: var(--moon); font-size: 3.2vh; padding: 1.6vh 2.4vw; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .row { display: flex; gap: 1vw; flex-wrap: wrap; align-items: center; }
+  footer { display: flex; justify-content: space-between; align-items: center; gap: 1vw; }
+  footer .row button { font-size: 2vh; padding: 0.8vh 1.2vw; }
+  .meter { height: 1.4vh; background: var(--panel); border-radius: 1vh; overflow: hidden; margin-top: 1vh; }
+  .meter i { display: block; height: 100%; background: var(--moon); transition: width 0.4s; }
+  .votes { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; }
+  .feed div { font-size: 3vh; padding: 0.6vh 0; animation: pop 0.35s ease-out; }
+  .tally .bar { display: grid; grid-template-columns: 14vw 1fr 3vw; align-items: center; gap: 1vw; font-size: 2.8vh; margin: 0.8vh 0; }
+  .tally .bar b { display: block; height: 2.6vh; background: var(--blood); border-radius: 0.6vh; transition: width 0.4s; }
+  .result { font-size: 6vh; text-align: center; padding: 2vh; }
+  table { width: 100%; border-collapse: collapse; font-size: 2.4vh; }
+  th, td { text-align: left; padding: 0.8vh 0.8vw; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--quiet); font-weight: normal; text-transform: uppercase; font-size: 1.9vh; letter-spacing: 0.06em; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .won { color: var(--good); } .lost { color: var(--quiet); }
+  .banner { font-size: 7vh; text-align: center; color: var(--moon); }
+  .overlay { position: fixed; inset: 0; z-index: 5; background: rgba(4,5,12,0.88); display: grid; place-items: center; text-align: center; cursor: pointer; }
+  .overlay p { font-size: 4vh; margin: 1vh; } .overlay .sub { font-size: 2.6vh; }
+  .toast { position: fixed; left: 50%; bottom: 10vh; transform: translateX(-50%); background: var(--blood); color: #fff; padding: 1.4vh 2vw; border-radius: 1vh; font-size: 2.6vh; z-index: 6; }
+  .village { position: fixed; left: 0; right: 0; bottom: 0; height: 22vh; z-index: 0; pointer-events: none; opacity: 0.5; }
+  @keyframes pop { from { opacity: 0; transform: translateY(1vh); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<svg class="village" viewBox="0 0 1600 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <path fill="#05060d" d="M0 300V220l60-30 40 20 50-60 50 60v-30h30v50l60-40 70 50 40-20 40 30 60-70 60 70 30-10 50 30 70-60 70 60 30-20 50 40 60-50 40 30 50-80 50 80 60-40 60 40 50-30 60 50 40-20 50 30 80-60 70 50L1600 230V300z"/>
+  <g fill="#f6c14a" opacity="0.5"><rect x="430" y="250" width="10" height="12"/><rect x="760" y="245" width="10" height="14"/></g>
+</svg>
+<div class="moon" aria-hidden="true"></div>
+<div class="app">
+  <header>
+    <h1 id="title">Village Werewolf<small id="kicker">Gather the villagers</small></h1>
+    <div class="timer" id="timer"></div>
+  </header>
+  <main id="main"></main>
+  <footer>
+    <div class="sub" id="status"></div>
+    <div class="row">
+      <button id="skip" title="End the current timer now">Skip timer</button>
+      <button id="voice">Voice: on</button>
+      <button id="newgame">New game</button>
+    </div>
+  </footer>
+</div>
+<div class="overlay" id="overlay"><div><p>Click anywhere to open the village</p><p class="sub">This lets the narrator speak.</p></div></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="tv.js"></script>
+</body>
+</html>

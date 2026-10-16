@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0d1020">
+<title>Village Werewolf</title>
+<style>
+  :root { --night: #0d1020; --ink: #f3ecd8; --quiet: #a9a3c4; --moon: #f6e7a6; --blood: #e0475b; --good: #5fd39a; --panel: rgba(255,255,255,0.07); --line: rgba(255,255,255,0.16); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background: var(--night); color: var(--ink); font-family: Georgia, 'Times New Roman', serif; font-size: 18px;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; overscroll-behavior: none;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 32px; }
+  .me { display: flex; align-items: center; gap: 10px; font-size: 20px; margin-bottom: 14px; }
+  .me .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; }
+  .me .tag { margin-left: auto; font-size: 14px; color: var(--quiet); }
+  h2 { font-weight: normal; font-size: 26px; margin: 8px 0 12px; }
+  p { line-height: 1.4; }
+  .sub { color: var(--quiet); font-size: 15px; }
+  input { width: 100%; font: inherit; font-size: 22px; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); -webkit-user-select: text; user-select: text; }
+  button { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; width: 100%; font-size: 20px; touch-action: manipulation; }
+  button.primary { background: var(--moon); color: #1a1a2e; border-color: var(--moon); margin-top: 12px; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opt { display: flex; align-items: center; gap: 8px; text-align: left; padding: 16px 12px; min-height: 60px; }
+  .opt .dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+  .opt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .opt.on { background: var(--moon); color: #1a1a2e; border-color: var(--moon); }
+  .opt.skip { grid-column: 1 / -1; justify-content: center; }
+  .card { margin-top: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); overflow: hidden; }
+  .peek { padding: 18px; text-align: center; font-size: 18px; touch-action: none; }
+  .peek.open { background: #1b1f3d; text-align: left; }
+  .role { font-size: 30px; color: var(--moon); }
+  .role.wolf { color: var(--blood); }
+  .result { padding: 10px 14px; border-radius: 10px; background: var(--panel); margin: 6px 0; }
+  .yes { color: var(--blood); } .no { color: var(--good); }
+  .ghost { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--quiet); color: var(--quiet); margin-bottom: 14px; }
+  .timer { float: right; color: var(--moon); font-variant-numeric: tabular-nums; }
+  .err { color: var(--blood); min-height: 1.4em; }
+  .done { color: var(--good); }
+  .quest { margin-top: 10px; }
+  .quest button { margin-top: 8px; padding: 12px; font-size: 17px; }
+  .quest button.on { background: var(--good); color: #0d1020; border-color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="sub">Connecting to the village...</p></div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="play.js"></script>
+</body>
+</html>
