@@ -40,6 +40,12 @@ module.exports = { pick, fill,
     'The wolves came, the wolves bit, and the Healer said: absolutely not.',
   ],
 
+  batSeen: [
+    'Also, a bat was seen fluttering over the village last night. Probably nothing. Probably.',
+    'Someone in the village woke up with two tiny holes in their neck and a sudden hatred of garlic.',
+    'Strange news: the blacksmith reports his garlic has been stolen. All of it.',
+  ],
+
   quietNight: [
     'The night passes quietly. Too quietly. The wolves could not agree on a snack.',
   ],
@@ -55,6 +61,11 @@ module.exports = { pick, fill,
     'The ghosts sense that {name}\'s hands smell faintly of wet dog.',
     'The ghosts noticed {name} growling at the moon last night.',
     'The ghosts report that {name} has very pointy teeth for someone who claims to be a baker.',
+  ],
+  ghostClueVampire: [
+    'The ghosts whisper that {name} has no reflection in the pond.',
+    'The ghosts sense that {name} hissed at a clove of garlic.',
+    'The ghosts noticed {name} sleeping upside down in the barn.',
   ],
   ghostClueVillage: [
     'The ghosts whisper that {name} slept like a baby, and snored like a walrus.',
@@ -78,6 +89,10 @@ module.exports = { pick, fill,
     'The village has spoken. {name} is dragged to the town square, and they were a Wolf! Good job, village.',
     '{name} is chased out of town. Underneath the fake mustache: fur. A Wolf! Nicely done.',
   ],
+  voteOutVampire: [
+    'The village has spoken. {name} is dragged into the sunlight, and they sizzle! A Vampire!',
+    '{name} is chased out of town, and a bat flies out of their hat. A Vampire! Nicely done.',
+  ],
   voteOutVillager: [
     'The village has spoken. {name} is dragged to the town square. They were... a perfectly innocent {role}. Oops.',
     '{name} is chased out of town with pitchforks. They were the {role}. Awkward.',
@@ -95,6 +110,7 @@ module.exports = { pick, fill,
 
   villageWins: 'The last wolf is gone! The village of Hollowmere is safe. Mostly. Village wins!',
   wolvesWin: 'The wolves now rule Hollowmere. Pass the ketchup. Wolves win!',
+  vampiresWin: 'The village is now a very pale, very quiet place. The Vampires win!',
   questReveal: 'Now, let us reveal everyone\'s secret side quests.',
 
   // Side quests. auto = checked by the game; honor = the player taps "Did it!"
@@ -130,9 +146,10 @@ module.exports = { pick, fill,
   ],
 
   roles: {
-    wolf: { name: 'Wolf', team: 'wolves', blurb: 'Each night, agree with the other Wolves on one villager to eat. Blend in during the day.' },
-    seer: { name: 'Seer', team: 'village', blurb: 'Each night, peek at one player to learn if they are a Wolf. Careful who you tell.' },
-    healer: { name: 'Healer', team: 'village', blurb: 'Each night, protect one player from the Wolves. Yourself is fine, but never the same person twice in a row.' },
+    wolf: { name: 'Wolf', team: 'wolves', blurb: 'Each night, agree with the other Wolves on one player to eat. Sometimes you smell who the Vampires turned. Blend in during the day.' },
+    vampire: { name: 'Vampire', team: 'vampires', blurb: 'Each night, bite one player to turn them into a Vampire too. Wolves can\'t be turned, and the Wolves might smell what you did. Win when the Vampires match everyone else.' },
+    seer: { name: 'Seer', team: 'village', blurb: 'Each night, peek at one player to learn if they are a Wolf, a Vampire, or neither. Careful who you tell.' },
+    healer: { name: 'Healer', team: 'village', blurb: 'Each night, protect one player from Wolves and Vampire bites. Yourself is fine, but never the same person twice in a row.' },
     hunter: { name: 'Hunter', team: 'village', blurb: 'If you die, by night or by vote, you instantly take one player down with you.' },
     villager: { name: 'Villager', team: 'village', blurb: 'No powers, just your wits. Find the Wolves and vote them out.' },
   },
