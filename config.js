@@ -12,6 +12,10 @@ module.exports = {
   VOTE_RESULT: 9,
   // Wolves by player count
   wolves: n => (n >= 12 ? 3 : n >= 8 ? 2 : 1),
+  // Vampires join at this many players (the host can switch them off in the lobby)
+  VAMPIRES_AT: 8,
+  vampires: n => (n >= 8 ? 1 : 0),
+  WOLF_SPOT_CHANCE: 0.5,   // chance the Wolves learn who the Vampires recruited tonight
   // Special villagers switch on as the group grows
   SEER_AT: 4, HEALER_AT: 6, HUNTER_AT: 7,
   // Scoring for the final scoreboard

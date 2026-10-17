@@ -108,6 +108,7 @@ function lobby() {
       <div class="row">
         <button class="primary" id="start" ${n < view.minPlayers ? 'disabled' : ''}>Start game</button>
         <button id="bots" ${n >= view.maxPlayers ? 'disabled' : ''}>Add 4 bots</button>
+        <button id="vamps" title="Vampires join at ${view.vampiresAt} or more players">Vampires: ${view.vampiresOn ? (n >= view.vampiresAt ? 'on' : `on at ${view.vampiresAt}+ players`) : 'off'}</button>
       </div>
     </div>
   </div>`;
@@ -136,7 +137,7 @@ function votes() {
 }
 
 function final() {
-  const w = view.winner === 'wolves' ? 'The Wolves win!' : 'The Village wins!';
+  const w = { wolves: 'The Wolves win!', vampires: 'The Vampires win!', village: 'The Village wins!' }[view.winner];
   return `<div class="banner">${w}</div>
   <table><thead><tr><th>Player</th><th>Role</th><th>Side quest</th><th>Done?</th><th class="num">Ghost bets</th><th class="num">Score</th></tr></thead><tbody>
   ${view.final.map(f => `<tr>
@@ -165,6 +166,7 @@ function render() {
   $('skip').disabled = !view.endsAt;
   if ($('start')) $('start').onclick = () => cmd('start');
   if ($('bots')) $('bots').onclick = () => cmd('bots');
+  if ($('vamps')) $('vamps').onclick = () => cmd('vampires');
   if (view.phase === 'lobby') document.querySelectorAll('.tile.click').forEach(el => el.onclick = () => cmd('remove', el.dataset.id));
   tickTimer();
 }

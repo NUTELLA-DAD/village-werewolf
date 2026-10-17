@@ -58,13 +58,23 @@ function roleCard() {
   const me = view.me;
   if (!me.role) return '';
   const inner = peeking ? `
-      <div class="role ${me.role.key === 'wolf' ? 'wolf' : ''}">${esc(me.role.name)}</div>
+      <div class="role ${me.role.key}">${esc(me.role.name)}</div>
       <p>${esc(me.role.blurb)}</p>
-      ${view.pack ? `<p>Your pack: ${view.pack.length ? view.pack.map(w => `${esc(w.name)}${w.alive ? '' : ' (dead)'}${w.pick ? ` <span class="sub">wants ${esc(w.pick)}</span>` : ''}`).join(', ') : 'just you'}.</p>` : ''}
-      ${view.seerResults && view.seerResults.length ? view.seerResults.map(r => `<div class="result">Night ${r.round}: ${esc(r.name)} is ${r.isWolf ? '<b class="yes">a Wolf!</b>' : '<b class="no">not a Wolf</b>'}</div>`).join('') : ''}
+      ${view.team ? `<p>${esc(view.team.label)}: ${view.team.members.length ? view.team.members.map(w => `${esc(w.name)}${w.alive ? '' : ' (dead)'}${w.pick ? ` <span class="sub">wants ${esc(w.pick)}</span>` : ''}`).join(', ') : 'just you'}.</p>` : ''}
+      ${view.seerResults && view.seerResults.length ? view.seerResults.map(r => `<div class="result">Night ${r.round}: ${esc(r.name)} is ${seen(r)}</div>`).join('') : ''}
+      ${view.notes.map(n => `<div class="result">Night ${n.round}: ${esc(n.text)}</div>`).join('')}
       <p class="sub">Side quest: ${esc(me.quest.text)}</p>`
     : `<div>Hold here to peek at your role</div><div class="sub">Let go to hide it again</div>`;
   return `<div class="card"><div class="peek ${peeking ? 'open' : ''}" id="peek">${inner}</div></div>`;
+}
+
+const seen = r => r.is === 'wolf' ? '<b class="yes">a Wolf!</b>' : r.is === 'vampire' ? '<b class="yes">a Vampire!</b>' : '<b class="no">neither a Wolf nor a Vampire</b>';
+
+// Fresh secret news from last night (bitten, smelled blood, fangs bounced) shows up front until night falls again
+function news() {
+  if (view.phase === 'night' || view.phase === 'roles' || view.phase === 'over') return '';
+  const fresh = (view.notes || []).filter(n => n.round === view.round);
+  return fresh.map(n => `<div class="news">${esc(n.text)}</div>`).join('');
 }
 
 function questButton() {
@@ -79,7 +89,7 @@ function taskBlock() {
   // The Seer sees the answer right away
   const seerNow = t.kind === 'peek' && picked && view.seerResults ? view.seerResults.at(-1) : null;
   return `<h2>${esc(t.prompt)} <span class="timer" id="timer"></span></h2>
-    ${seerNow ? `<div class="result">${esc(seerNow.name)} is ${seerNow.isWolf ? '<b class="yes">a Wolf!</b>' : '<b class="no">not a Wolf</b>'}</div>` : ''}
+    ${seerNow ? `<div class="result">${esc(seerNow.name)} is ${seen(seerNow)}</div>` : ''}
     <div class="opts">
       ${t.options.map(o => `<button class="opt ${picked === o.id ? 'on' : ''}" data-id="${o.id}" ${seerNow ? 'disabled' : ''}><span class="dot" style="background:${o.color}"></span><span>${esc(o.name)}</span></button>`).join('')}
       ${t.canSkip ? `<button class="opt skip ${picked === 'skip' ? 'on' : ''}" data-id="skip">Skip, nobody</button>` : ''}
@@ -102,10 +112,11 @@ const LOOK_UP = {
 function render() {
   if (!view) return;
   let body = header();
+  body += news();
   if (!view.me.alive && view.phase !== 'over') body += `<div class="ghost">You are a Ghost. No talking! Moaning and dramatic pointing are allowed.</div>`;
   if (view.phase === 'over') {
     const f = view.final;
-    body += `<h2>${view.winner === 'wolves' ? 'The Wolves win!' : 'The Village wins!'}</h2>
+    body += `<h2>${{ wolves: 'The Wolves win!', vampires: 'The Vampires win!', village: 'The Village wins!' }[view.winner]}</h2>
       <p>You were the <b>${esc(view.me.role.name)}</b>. ${f.won ? '<span class="done">Your team won.</span>' : 'Your team lost.'}</p>
       <p>Side quest: ${esc(view.me.quest.text)} ${f.questDone ? '<span class="done">Done!</span>' : '<span class="sub">Not done.</span>'}</p>
       <p>Your score: <b>${f.score}</b></p><p class="sub">The full scoreboard is on the TV.</p>`;

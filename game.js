@@ -22,6 +22,7 @@ function topPick(values, tieIsNull = false) {
 class Game {
   constructor() {
     this.players = new Map(); // id -> player, in join order
+    this.vampiresOn = true;   // host can switch the Vampires off in the lobby
     this.lines = [];          // narrator lines, newest last
     this.lineId = 0;
     this.version = 0;         // bumps on every change, so the server knows when to resend
@@ -42,7 +43,7 @@ class Game {
     this.winner = null;
     this.final = null;
     for (const p of this.players.values()) Object.assign(p, {
-      alive: true, role: null, quest: null, questClaimed: false, betPoints: 0, seerResults: [], score: 0,
+      alive: true, role: null, quest: null, questClaimed: false, betPoints: 0, seerResults: [], notes: [], score: 0,
     });
     this.touch();
   }
@@ -72,7 +73,7 @@ class Game {
     const p = {
       id: crypto.randomBytes(8).toString('hex'), name, isBot, connected: isBot,
       color: COLORS.find(c => !used.has(c)) || COLORS[this.players.size % COLORS.length],
-      alive: true, role: null, quest: null, questClaimed: false, betPoints: 0, seerResults: [], score: 0,
+      alive: true, role: null, quest: null, questClaimed: false, betPoints: 0, seerResults: [], notes: [], score: 0,
     };
     this.players.set(p.id, p);
     this.touch();
@@ -97,12 +98,14 @@ class Game {
     if (cmd === 'skip' && this.endsAt) { this.endsAt = now; return this.tick(now); }
     if (cmd === 'newgame') { this.reset(); return; }
     if (cmd === 'remove') return this.removePlayer(arg);
+    if (cmd === 'vampires' && this.phase === 'lobby') { this.vampiresOn = !this.vampiresOn; this.touch(); }
   }
 
   start(now) {
     const n = this.players.size;
     if (n < C.MIN_PLAYERS) return { error: `Need at least ${C.MIN_PLAYERS} players.` };
     const roles = Array(C.wolves(n)).fill('wolf');
+    if (this.vampiresOn) for (let i = 0; i < C.vampires(n); i++) roles.push('vampire');
     if (n >= C.SEER_AT) roles.push('seer');
     if (n >= C.HEALER_AT) roles.push('healer');
     if (n >= C.HUNTER_AT) roles.push('hunter');
@@ -134,7 +137,8 @@ class Game {
     const others = this.alive.filter(o => o.id !== p.id);
     if (this.phase === 'night') {
       if (!p.alive) return { kind: 'haunt', prompt: 'Pick a living player to haunt. The ghosts will drop a clue about them.', options: this.alive };
-      if (p.role === 'wolf') return { kind: 'kill', prompt: 'Pick a villager to eat. Agree with your pack.', options: this.alive.filter(o => o.role !== 'wolf') };
+      if (p.role === 'wolf') return { kind: 'kill', prompt: 'Pick someone to eat. Agree with your pack.', options: this.alive.filter(o => o.role !== 'wolf') };
+      if (p.role === 'vampire') return { kind: 'bite', prompt: 'Pick someone to bite and turn into a Vampire. Agree with your coven.', options: this.alive.filter(o => o.role !== 'vampire') };
       if (p.role === 'seer') return { kind: 'peek', prompt: 'Pick a player to peek at.', options: others };
       if (p.role === 'healer') return { kind: 'protect', prompt: 'Pick a player to protect tonight.', options: this.alive.filter(o => o.id !== this.lastProtected) };
       return { kind: 'decoy', prompt: this.night.decoys[p.id], options: others };
@@ -171,7 +175,7 @@ class Game {
       this.night.picks[p.id] = target;
       if (t.kind === 'peek') {
         const o = this.players.get(target);
-        p.seerResults.push({ round: this.round, name: o.name, isWolf: o.role === 'wolf' });
+        p.seerResults.push({ round: this.round, name: o.name, is: o.role === 'wolf' ? 'wolf' : o.role === 'vampire' ? 'vampire' : 'clean' });
       }
     } else if (this.phase === 'vote') {
       if (p.alive) this.vote.votes[p.id] = target; else this.vote.bets[p.id] = target;
@@ -231,16 +235,33 @@ class Game {
     const haunted = topPick(this.ghosts.map(g => picks[g.id]));
 
     this.say(T.pick(T.morning));
-    this.deathsThisRound = [];
     if (victim && victim !== saved) {
       this.kill(victim);
       this.say(T.fill(T.pick(T.deaths), { name: this.name(victim) }));
     } else if (victim) this.say(T.pick(T.saved));
     else this.say(T.pick(T.quietNight));
 
+    this.resolveBite(saved);
+
     const h = haunted && this.players.get(haunted);
-    if (h && h.alive) this.say(T.fill(T.pick(h.role === 'wolf' ? T.ghostClueWolf : T.ghostClueVillage), { name: h.name }));
+    const clues = h && (h.role === 'wolf' ? T.ghostClueWolf : h.role === 'vampire' ? T.ghostClueVampire : T.ghostClueVillage);
+    if (h && h.alive) this.say(T.fill(T.pick(clues), { name: h.name }));
     this.setPhase('morning', now, C.MORNING);
+  }
+
+  // The coven's bite: turns one player into a Vampire, unless they died, were protected, or are a Wolf.
+  resolveBite(saved) {
+    const coven = this.alive.filter(p => p.role === 'vampire');
+    const target = this.players.get(topPick(coven.map(v => this.night.picks[v.id])));
+    if (!coven.length || !target || !target.alive || target.id === saved) return;
+    const note = (list, text) => list.forEach(p => p.notes.push({ round: this.round, text }));
+    if (target.role === 'wolf') return note(coven, `Your fangs bounced off ${target.name}. They are a Wolf!`);
+    target.role = 'vampire';
+    note([target], 'You were bitten in the night! You are a Vampire now. Your coven is on your phone.');
+    note(coven, `${target.name} has joined your coven.`);
+    const wolves = this.alive.filter(p => p.role === 'wolf');
+    if (Math.random() < C.WOLF_SPOT_CHANCE) note(wolves, `You smell fresh blood. ${target.name} was bitten and is now a Vampire!`);
+    this.say(T.pick(T.batSeen));
   }
 
   kill(id) {
@@ -311,7 +332,7 @@ class Game {
     const day = this.dayVotes.at(-1);
     if (out) {
       this.kill(out.id);
-      const lines = out.role === 'wolf' ? T.voteOutWolf : T.voteOutVillager;
+      const lines = out.role === 'wolf' ? T.voteOutWolf : out.role === 'vampire' ? T.voteOutVampire : T.voteOutVillager;
       this.say(T.fill(T.pick(lines), { name: out.name, role: T.roles[out.role].name }));
     } else this.say(T.pick(day.hadVotes ? T.voteTie : T.voteNobody));
     this.setPhase('voteResult', now, C.VOTE_RESULT);
@@ -319,10 +340,14 @@ class Game {
 
   checkWin(now) {
     const wolves = this.alive.filter(p => p.role === 'wolf').length;
-    const others = this.alive.length - wolves;
-    if (wolves && wolves < others) return false;
-    this.winner = wolves ? 'wolves' : 'village';
-    this.say(this.winner === 'wolves' ? T.wolvesWin : T.villageWins);
+    const vamps = this.alive.filter(p => p.role === 'vampire').length;
+    const others = this.alive.length - wolves - vamps;
+    // A team wins once it is the only monster team left and matches everyone else alive.
+    if (!wolves && !vamps) this.winner = 'village';
+    else if (wolves && !vamps && wolves >= others) this.winner = 'wolves';
+    else if (vamps && !wolves && vamps >= others) this.winner = 'vampires';
+    else return false;
+    this.say({ village: T.villageWins, wolves: T.wolvesWin, vampires: T.vampiresWin }[this.winner]);
     this.say(T.questReveal);
     this.final = this.list.map(p => {
       const questDone = this.questDone(p);
@@ -371,6 +396,7 @@ class Game {
       winner: this.winner,
       final: this.final && this.final.map(f => ({ ...f, role: T.roles[f.role].name })),
       minPlayers: C.MIN_PLAYERS, maxPlayers: C.MAX_PLAYERS,
+      vampiresOn: this.vampiresOn, vampiresAt: C.VAMPIRES_AT,
     };
   }
 
@@ -388,10 +414,14 @@ class Game {
       },
       task: t && { kind: t.kind, prompt: t.prompt, canSkip: !!t.canSkip, options: t.options.map(o => ({ id: o.id, name: o.name, color: o.color })) },
       picked: t ? this.picked(p) : null,
-      // Wolves see their pack, and each other's picks at night
-      pack: p.role === 'wolf' ? this.list.filter(o => o.role === 'wolf' && o.id !== p.id).map(o => ({
-        name: o.name, alive: o.alive, pick: this.phase === 'night' && this.night.picks[o.id] ? this.name(this.night.picks[o.id]) : null,
-      })) : null,
+      // Wolves see their pack and Vampires their coven, with each other's picks at night
+      team: (p.role === 'wolf' || p.role === 'vampire') ? {
+        label: p.role === 'wolf' ? 'Your pack' : 'Your coven',
+        members: this.list.filter(o => o.role === p.role && o.id !== p.id).map(o => ({
+          name: o.name, alive: o.alive, pick: this.phase === 'night' && this.night.picks[o.id] ? this.name(this.night.picks[o.id]) : null,
+        })),
+      } : null,
+      notes: p.notes,
       seerResults: p.role === 'seer' ? p.seerResults : null,
       final: this.phase === 'over' ? this.final.find(f => f.id === p.id) : null,
       winner: this.winner,
